@@ -72,7 +72,26 @@ As well as adversarial reward, there are other chemical properties that can be d
 \section{Technical Details}
 \subsection{ZINC250k Dataset}
 \subsection{Operating Environment and Program Time}
+
 \section{Results}
+The generation of drug-like molecules was trained using the ZINC 250k dataset. We weren’t able to have the process converge, but we were able to keep it running for 9.9 hours, before we terminated the process. The output is a csv file that consists of each iteration the program ran. Each iteration consists of the molecule(s) generated and labeled in the SMILES representation, and several step-wise rewards. In this run, we focused on generating molecules with the highest possible penalized logP and QED scores. logP score accounts for synthetic accessibility and QED score indicates druglikeness.
+
+When generating molecules, there are two types of rewards that guide the behavior of the RL agent: domain-specific rewards and intermediate rewards. Domain-specific rewards consist of the combination of final property scores, such as octanol-water partition coefficient (logP), druglikeness, and molecular weight. In addition, it includes the penalization of unrealistic molecules that violate steric strain and zinc functional group rules. Intermediate rewards consist of the stepwise validity rewards and adversarial rewards. For example, if no valency rules are violated then a small positive value is added to the stepwise reward. For the adversarial rewards, the GAN framework is employed to ensure the generated molecules resemble a given set of molecules. The specific rewards indicated in the output file are: \textbf{reward_valid}, \textbf{reward_qed}, \textbf{reward_sa}, \textbf{rew_env}, \textbf{rew_d_step}, \textbf{rew_d_final}, \textbf{cur_ep_ret}, \textbf{flag_steric_filter}, \textbf{flag_zinc_filter}, and \textbf{stop}.
+
+\textbf{reward_valid} is a value of 2 if it passes the 3D conversion check, meaning that there’s no excessive strain on the molecule and it if doesn’t contain any problematic functional groups. (i.e. If flag_steric_strain_filter is TRUE and flag_zinc_molecule_filter is also TRUE, this variable receives a value of 2)
+\textbf{reward_qed} is the reward for druglikeness (QED). Its values are between [0,1]. The higher the reward the better, since we are trying to maximize this value. QED stands for the quantitative estimation of drug-likeness. The QED score reflects the underlying distribution of molecular properties, such as molecular weight, logP, topological polar surface area, number of hydrogen bond donors and acceptors, number of aromatic rings and rotatable bonds, and the presence of unwanted chemical functionalities.
+\textbf{reward_sa} is the reward for synthetic accessibility. Its values are normalized between [0,1]. The higher the better, because this is one of the target properties to optimize. Synthetic accessibility score is the measure of how easily the molecule synthesizes to create compounds. 
+\textbf{final_stat} depends on the reward type (i.e. logP target, QED target, molecular weight target)
+\textbf{rew_env} is a reward value based on an action in the certain environment, given by this formula: env.step(ac)
+\textbf{rew_d_step} is mainly comprised of a step ratio and step function
+\textbf{rew_d_final} is mainly comprised of the final ratio and final function
+\textbf{cur_ep_ret} returns the reward in the current episode, which is the sum of the previous 3 values for all steps in the current episode.
+\textbf{flag_steric_strain_filter} is TRUE if there is no excessive steric strain. This is the increase in potential energy of a molecule due to repulsion between electrons in atoms that are not directly bonded to each other. This makes it unlikely for the molecule to be stable in ordinary conditions, thus not generating a realistic molecule.
+\textbf{flag_zinc_molecule_filter} is TRUE if the molecule doesn’t possess any problematic and reactive functional groups based on the zinc functional group
+\textbf{stop} is TRUE if the molecule is complete and doesn’t need any more additions. However, atoms and edges can still be added to molecules in the next iteration, even when the stop value is TRUE for the current iteration.
+
+
 \section{Discussion}
+The last iteration that ran was able to generate 11 different molecules that fully satisfied the zinc molecule check and the steric strain check. Therefore, each molecule’s \textbf{reward_valid} variable is 2. This is not the last iteration of the process, rather the last iteration before we purposely terminated the process before convergence. That being said, these values and molecules generated are not final and it was a coincidence they all resulted in reward_valid values of 2 and stop variable was also TRUE. All other rewards, including reward_qed and reward_sa are iteration-based rewards per molecule, so these values will not necessarily converge to single values. However, we do expect the QED score and the logP scores to be optimized for the most realistic molecules produced.
 
 \end{document}
